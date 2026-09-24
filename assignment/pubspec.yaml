@@ -17,6 +17,7 @@ dependencies:
   firebase_auth: ^6.7.0
   google_sign_in: ^6.2.2
   equatable: ^3.0.0
+  dio: ^5.11.1
 
 dev_dependencies:
   flutter_test:
