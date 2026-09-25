@@ -1,12 +1,17 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../di/injection_container.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/bloc/auth_state.dart';
-import '../../features/auth/presentation/pages/authenticated_home_page.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
+import '../../features/employee/domain/entities/employee_entity.dart';
+import '../../features/employee/presentation/bloc/employee_bloc.dart';
+import '../../features/employee/presentation/pages/employee_dashboard_page.dart';
+import '../../features/employee/presentation/pages/employee_details_page.dart';
 import '../../features/splash/presentation/pages/splash_page.dart';
 import 'route_names.dart';
 
@@ -164,7 +169,10 @@ class AppRouter {
           pageBuilder: (context, state) {
             final authState = authBloc.state;
             final page = authState is AuthenticatedState
-                ? AuthenticatedHomePage(user: authState.user)
+                ? BlocProvider<EmployeeBloc>(
+                    create: (_) => sl<EmployeeBloc>(),
+                    child: EmployeeDashboardPage(user: authState.user),
+                  )
                 : const LoginPage();
             return CustomTransitionPage(
               key: state.pageKey,
@@ -178,6 +186,37 @@ class AppRouter {
                     curve: Curves.easeInOutCubic,
                   ),
                   child: child,
+                );
+              },
+            );
+          },
+        ),
+        GoRoute(
+          path: RouteNames.employeeDetails,
+          pageBuilder: (context, state) {
+            final employee = state.extra as EmployeeEntity?;
+            if (employee == null) {
+              return const MaterialPage(
+                child: Scaffold(
+                  body: Center(child: Text('No employee selected')),
+                ),
+              );
+            }
+            return CustomTransitionPage(
+              key: state.pageKey,
+              child: EmployeeDetailsPage(employee: employee),
+              transitionDuration: const Duration(milliseconds: 350),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0.05, 0),
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
+                  ),
                 );
               },
             );

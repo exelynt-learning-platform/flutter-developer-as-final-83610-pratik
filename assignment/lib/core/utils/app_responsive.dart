@@ -58,6 +58,10 @@ class AppResponsive {
     return scale(context, baseSpacing);
   }
 
+  /// Dynamic padding scaled to screen size
+  static double padding(BuildContext context, double basePadding) =>
+      scale(context, basePadding);
+
   /// Dynamic horizontal screen padding for pages
   static double horizontalPadding(BuildContext context) {
     final w = width(context);

@@ -13,6 +13,7 @@ import '../../features/employee/data/datasources/employee_remote_data_source.dar
 import '../../features/employee/data/repositories/employee_repository_impl.dart';
 import '../../features/employee/domain/repositories/employee_repository.dart';
 import '../../features/employee/domain/usecases/employee_usecases.dart';
+import '../../features/employee/presentation/bloc/employee_bloc.dart';
 
 final sl = GetIt.instance;
 
@@ -118,5 +119,10 @@ Future<void> initDependencies() async {
   );
   sl.registerLazySingleton<GetCountriesUseCase>(
     () => GetCountriesUseCase(sl<EmployeeRepository>()),
+  );
+
+  // Employee - BLoC
+  sl.registerFactory<EmployeeBloc>(
+    () => EmployeeBloc(getEmployeesUseCase: sl<GetEmployeesUseCase>()),
   );
 }

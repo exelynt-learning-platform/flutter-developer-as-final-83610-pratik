@@ -7,5 +7,6 @@ class RouteNames {
   static const String forgotPassword = '/forgot-password';
   static const String dashboard = '/dashboard';
   static const String employeeDetail = '/employee-detail';
+  static const String employeeDetails = '/employee-detail';
   static const String employeeForm = '/employee-form';
 }
