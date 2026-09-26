@@ -16,6 +16,7 @@ import '../widgets/add_edit_employee_dialog.dart';
 import '../widgets/delete_employee_dialog.dart';
 import '../widgets/employee_card.dart';
 import '../widgets/employee_shimmer_loading.dart';
+import '../widgets/filter_bottom_sheet.dart';
 
 /// Visually stunning, professional SaaS Employee Dashboard.
 /// Complete with full CRUD capabilities (Add, Edit, Delete with confirmation),
@@ -228,82 +229,90 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
     );
   }
 
+  bool _matchesId(EmployeeEntity emp, String query) {
+    return emp.id.toLowerCase() == query ||
+        emp.id.toLowerCase().contains(query) ||
+        'emp-${emp.id}'.toLowerCase().contains(query) ||
+        '#${emp.id}'.toLowerCase().contains(query);
+  }
+
+  bool _matchesName(EmployeeEntity emp, String query) =>
+      emp.name.toLowerCase().contains(query);
+
+  bool _matchesEmail(EmployeeEntity emp, String query) =>
+      emp.email.toLowerCase().contains(query);
+
+  bool _matchesMobile(EmployeeEntity emp, String query) =>
+      emp.mobile.toLowerCase().contains(query);
+
+  bool _matchesCountry(EmployeeEntity emp, String query) =>
+      emp.country.toLowerCase().contains(query);
+
+  bool _matchesGlobal(EmployeeEntity emp, String query) {
+    return _matchesName(emp, query) ||
+        _matchesId(emp, query) ||
+        _matchesEmail(emp, query) ||
+        _matchesMobile(emp, query) ||
+        _matchesCountry(emp, query) ||
+        emp.state.toLowerCase().contains(query) ||
+        emp.district.toLowerCase().contains(query);
+  }
+
+  bool _matchesSearchField(EmployeeEntity emp, String query) {
+    switch (_activeSearchField) {
+      case 'ID':
+        return _matchesId(emp, query);
+      case 'Name':
+        return _matchesName(emp, query);
+      case 'Email':
+        return _matchesEmail(emp, query);
+      case 'Mobile':
+        return _matchesMobile(emp, query);
+      case 'Country':
+        return _matchesCountry(emp, query);
+      default:
+        return _matchesGlobal(emp, query);
+    }
+  }
+
   List<EmployeeEntity> _filterAndSort(List<EmployeeEntity> rawList) {
     final query = _searchController.text.trim().toLowerCase();
-    var list = rawList.where((emp) {
-      // 1. Search Query with Field Specificity or Global Search
-      if (query.isNotEmpty) {
-        if (_activeSearchField == 'ID') {
-          final idMatch = emp.id.toLowerCase() == query ||
-              emp.id.toLowerCase().contains(query) ||
-              'emp-${emp.id}'.toLowerCase().contains(query) ||
-              '#${emp.id}'.toLowerCase().contains(query);
-          if (!idMatch) return false;
-        } else if (_activeSearchField == 'Name') {
-          if (!emp.name.toLowerCase().contains(query)) return false;
-        } else if (_activeSearchField == 'Email') {
-          if (!emp.email.toLowerCase().contains(query)) return false;
-        } else if (_activeSearchField == 'Mobile') {
-          if (!emp.mobile.toLowerCase().contains(query)) return false;
-        } else if (_activeSearchField == 'Country') {
-          if (!emp.country.toLowerCase().contains(query)) return false;
-        } else {
-          // Global Search
-          final nameMatch = emp.name.toLowerCase().contains(query);
-          final idMatch = emp.id.toLowerCase().contains(query) ||
-              'emp-${emp.id}'.toLowerCase().contains(query) ||
-              '#${emp.id}'.toLowerCase().contains(query);
-          final emailMatch = emp.email.toLowerCase().contains(query);
-          final mobileMatch = emp.mobile.toLowerCase().contains(query);
-          final countryMatch = emp.country.toLowerCase().contains(query);
-          final stateMatch = emp.state.toLowerCase().contains(query);
-          final districtMatch = emp.district.toLowerCase().contains(query);
 
-          if (!nameMatch &&
-              !idMatch &&
-              !emailMatch &&
-              !mobileMatch &&
-              !countryMatch &&
-              !stateMatch &&
-              !districtMatch) {
-            return false;
-          }
-        }
+    final filtered = rawList.where((emp) {
+      if (query.isNotEmpty && !_matchesSearchField(emp, query)) {
+        return false;
       }
-
-      // 2. Country Filter
-      if (_selectedCountryFilter != 'All') {
-        if (!emp.country.toLowerCase().contains(_selectedCountryFilter.toLowerCase())) {
-          return false;
-        }
+      if (_selectedCountryFilter != 'All' &&
+          !emp.country.toLowerCase().contains(_selectedCountryFilter.toLowerCase())) {
+        return false;
       }
-
       return true;
     }).toList();
 
-    // 3. Sorting
-    if (_sortBy == 'Name') {
-      list.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-    } else if (_sortBy == 'ID') {
-      list.sort((a, b) {
-        final aInt = int.tryParse(a.id) ?? 0;
-        final bInt = int.tryParse(b.id) ?? 0;
-        return aInt.compareTo(bInt);
-      });
-    } else if (_sortBy == 'Date') {
-      list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    }
+    _sortEmployees(filtered);
+    return filtered;
+  }
 
-    return list;
+  void _sortEmployees(List<EmployeeEntity> list) {
+    switch (_sortBy) {
+      case 'ID':
+        list.sort((a, b) {
+          final aInt = int.tryParse(a.id) ?? 0;
+          final bInt = int.tryParse(b.id) ?? 0;
+          return aInt.compareTo(bInt);
+        });
+        break;
+      case 'Date':
+        list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        break;
+      case 'Name':
+      default:
+        list.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+        break;
+    }
   }
 
   void _openFilterBottomSheet(BuildContext context, List<EmployeeEntity> employees) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surfaceColor = isDark ? AppColors.surfaceDark : Colors.white;
-    final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
-    final primaryTextColor = isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A);
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : const Color(0xFF64748B);
-
     final uniqueCountries = <String>{'All'};
     for (final emp in employees) {
       if (emp.country.trim().isNotEmpty) {
@@ -314,295 +323,19 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
       uniqueCountries.addAll(['India', 'United States', 'United Kingdom', 'Canada', 'Germany', 'Australia']);
     }
 
-    String tempField = _activeSearchField;
-    String tempCountry = _selectedCountryFilter;
-    String tempSort = _sortBy;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: surfaceColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20.0)),
-      ),
-      builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            return SafeArea(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  AppResponsive.scale(context, 20.0),
-                  AppResponsive.scale(context, 12.0),
-                  AppResponsive.scale(context, 20.0),
-                  AppResponsive.scale(context, 20.0),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: AppResponsive.scale(context, 16.0)),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFEEF2FF),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(
-                                Icons.tune_rounded,
-                                color: Color(0xFF4F46E5),
-                                size: 18,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              'Filter & Sort',
-                              style: TextStyle(
-                                fontSize: AppResponsive.fontSize(context, 18.0),
-                                fontWeight: FontWeight.w700,
-                                color: primaryTextColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            setSheetState(() {
-                              tempField = 'All';
-                              tempCountry = 'All';
-                              tempSort = 'Name';
-                            });
-                          },
-                          child: const Text(
-                            'Reset All',
-                            style: TextStyle(
-                              fontSize: 13.0,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.error,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Divider(height: 24),
-
-                    Text(
-                      'FILTER BY FIELD',
-                      style: TextStyle(
-                        fontSize: AppResponsive.fontSize(context, 11.5),
-                        fontWeight: FontWeight.w700,
-                        color: secondaryTextColor,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    SizedBox(height: AppResponsive.scale(context, 8.0)),
-                    Wrap(
-                      spacing: 8.0,
-                      runSpacing: 8.0,
-                      children: ['All', 'Name', 'Email', 'Mobile', 'Country', 'ID'].map((field) {
-                        final isSelected = tempField == field;
-                        return ChoiceChip(
-                          label: Text(field == 'All' ? 'All Fields' : field),
-                          selected: isSelected,
-                          onSelected: (val) {
-                            if (val) setSheetState(() => tempField = field);
-                          },
-                          selectedColor: const Color(0xFF4F46E5),
-                          backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                          labelStyle: TextStyle(
-                            color: isSelected ? Colors.white : primaryTextColor,
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                            fontSize: AppResponsive.fontSize(context, 12.5),
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8.0),
-                            side: BorderSide(
-                              color: isSelected ? const Color(0xFF4F46E5) : borderColor,
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    SizedBox(height: AppResponsive.scale(context, 16.0)),
-
-                    Text(
-                      'FILTER BY COUNTRY',
-                      style: TextStyle(
-                        fontSize: AppResponsive.fontSize(context, 11.5),
-                        fontWeight: FontWeight.w700,
-                        color: secondaryTextColor,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    SizedBox(height: AppResponsive.scale(context, 8.0)),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: uniqueCountries.map((country) {
-                          final isSelected = tempCountry.toLowerCase() == country.toLowerCase();
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8.0),
-                            child: ChoiceChip(
-                              label: Text(country),
-                              selected: isSelected,
-                              onSelected: (val) {
-                                if (val) setSheetState(() => tempCountry = country);
-                              },
-                              selectedColor: const Color(0xFF4F46E5),
-                              backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                              labelStyle: TextStyle(
-                                color: isSelected ? Colors.white : primaryTextColor,
-                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                                fontSize: AppResponsive.fontSize(context, 12.5),
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8.0),
-                                side: BorderSide(
-                                  color: isSelected ? const Color(0xFF4F46E5) : borderColor,
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                    SizedBox(height: AppResponsive.scale(context, 16.0)),
-
-                    Text(
-                      'SORT BY',
-                      style: TextStyle(
-                        fontSize: AppResponsive.fontSize(context, 11.5),
-                        fontWeight: FontWeight.w700,
-                        color: secondaryTextColor,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    SizedBox(height: AppResponsive.scale(context, 8.0)),
-                    Row(
-                      children: [
-                        _buildSortRadio(
-                          label: 'Name (A-Z)',
-                          value: 'Name',
-                          groupValue: tempSort,
-                          onChanged: (val) => setSheetState(() => tempSort = val!),
-                          isDark: isDark,
-                          primaryTextColor: primaryTextColor,
-                        ),
-                        const SizedBox(width: 8),
-                        _buildSortRadio(
-                          label: 'ID',
-                          value: 'ID',
-                          groupValue: tempSort,
-                          onChanged: (val) => setSheetState(() => tempSort = val!),
-                          isDark: isDark,
-                          primaryTextColor: primaryTextColor,
-                        ),
-                        const SizedBox(width: 8),
-                        _buildSortRadio(
-                          label: 'Date',
-                          value: 'Date',
-                          groupValue: tempSort,
-                          onChanged: (val) => setSheetState(() => tempSort = val!),
-                          isDark: isDark,
-                          primaryTextColor: primaryTextColor,
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: AppResponsive.scale(context, 24.0)),
-
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            _activeSearchField = tempField;
-                            _selectedCountryFilter = tempCountry;
-                            _sortBy = tempSort;
-                          });
-                          Navigator.of(sheetContext).pop();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF4F46E5),
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(
-                            vertical: AppResponsive.scale(context, 14.0),
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10.0),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: Text(
-                          'Apply Filters',
-                          style: TextStyle(
-                            fontSize: AppResponsive.fontSize(context, 14.0),
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
+    FilterBottomSheet.show(
+      context,
+      initialField: _activeSearchField,
+      initialCountry: _selectedCountryFilter,
+      initialSort: _sortBy,
+      availableCountries: uniqueCountries.toList(),
+      onApply: (field, country, sort) {
+        setState(() {
+          _activeSearchField = field;
+          _selectedCountryFilter = country;
+          _sortBy = sort;
+        });
       },
-    );
-  }
-
-  Widget _buildSortRadio({
-    required String label,
-    required String value,
-    required String groupValue,
-    required ValueChanged<String?> onChanged,
-    required bool isDark,
-    required Color primaryTextColor,
-  }) {
-    final isSelected = value == groupValue;
-    return Expanded(
-      child: InkWell(
-        onTap: () => onChanged(value),
-        borderRadius: BorderRadius.circular(8.0),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 6.0),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? const Color(0xFFEEF2FF)
-                : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC)),
-            borderRadius: BorderRadius.circular(8.0),
-            border: Border.all(
-              color: isSelected ? const Color(0xFF4F46E5) : const Color(0xFFCBD5E1),
-              width: 1.0,
-            ),
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 12.0,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected ? const Color(0xFF4F46E5) : primaryTextColor,
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/errors/failures.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/utils/input_validators.dart';
 import '../../../../core/widgets/core_widgets.dart';
@@ -85,20 +86,21 @@ class _LoginPageState extends State<LoginPage> {
               ),
             );
           } else if (state is AuthFailureState) {
-            final error = state.errorMessage.trim();
-            final lower = error.toLowerCase();
+            final failure = state.failure;
+            final isWrongPassword = failure is InvalidCredentialsFailure ||
+                state.errorMessage.toLowerCase().contains('incorrect password') ||
+                state.errorMessage.toLowerCase().contains('wrong password');
 
-            if (lower.contains('incorrect password') ||
-                lower.contains('wrong password') ||
-                lower == 'wrong-password') {
+            final isEmailNotRegistered = failure is UserNotFoundFailure ||
+                state.errorMessage.toLowerCase().contains('not registered') ||
+                state.errorMessage.toLowerCase().contains('not found');
+
+            if (isWrongPassword) {
               // Password is wrong: show error text near the textfield only
               setState(() {
                 _passwordErrorText = 'Incorrect password';
               });
-            } else if (lower.contains('email not registered') ||
-                lower.contains('not registered') ||
-                lower.contains('not found') ||
-                lower.contains('no account')) {
+            } else if (isEmailNotRegistered) {
               // Not registered: show SnackBar "Email not registered"
               setState(() {
                 _passwordErrorText = null;

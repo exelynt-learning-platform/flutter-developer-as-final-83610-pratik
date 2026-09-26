@@ -50,27 +50,17 @@ class LocalDemoAuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   Map<String, Map<String, dynamic>> _getRegisteredUsers() {
     final data = _prefs.getString(_registeredUsersKey);
-    if (data != null) {
+    if (data != null && data.isNotEmpty) {
       try {
         final decoded = jsonDecode(data) as Map<String, dynamic>;
-        return decoded.map((k, v) => MapEntry(k.toLowerCase(), Map<String, dynamic>.from(v as Map)));
+        return decoded.map(
+          (k, v) => MapEntry(k.toLowerCase(), Map<String, dynamic>.from(v as Map)),
+        );
       } catch (_) {
-        return _seedDefaultUsers();
+        return <String, Map<String, dynamic>>{};
       }
     }
-    return _seedDefaultUsers();
-  }
-
-  Map<String, Map<String, dynamic>> _seedDefaultUsers() {
-    final initial = {
-      'alex.turner@company.com': {
-        'id': 'demo-user-alex',
-        'displayName': 'Alex Turner',
-        'password': 'Password123!',
-      },
-    };
-    _prefs.setString(_registeredUsersKey, jsonEncode(initial));
-    return initial;
+    return <String, Map<String, dynamic>>{};
   }
 
   @override

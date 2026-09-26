@@ -74,7 +74,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     );
     result.fold(
       onSuccess: (user) => emit(AuthenticatedState(user)),
-      onError: (failure) => emit(AuthFailureState(failure.message)),
+      onError: (failure) => emit(AuthFailureState(failure.message, failure: failure)),
     );
   }
 
@@ -90,7 +90,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     );
     result.fold(
       onSuccess: (user) => emit(AuthenticatedState(user)),
-      onError: (failure) => emit(AuthFailureState(failure.message)),
+      onError: (failure) => emit(AuthFailureState(failure.message, failure: failure)),
     );
   }
 
@@ -102,7 +102,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final result = await _googleSignInUseCase();
     result.fold(
       onSuccess: (user) => emit(AuthenticatedState(user)),
-      onError: (failure) => emit(AuthFailureState(failure.message)),
+      onError: (failure) => emit(AuthFailureState(failure.message, failure: failure)),
     );
   }
 
@@ -114,7 +114,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final result = await _forgotPasswordUseCase(email: event.email);
     result.fold(
       onSuccess: (_) => emit(PasswordResetSentState(event.email)),
-      onError: (failure) => emit(AuthFailureState(failure.message)),
+      onError: (failure) => emit(AuthFailureState(failure.message, failure: failure)),
     );
   }
 

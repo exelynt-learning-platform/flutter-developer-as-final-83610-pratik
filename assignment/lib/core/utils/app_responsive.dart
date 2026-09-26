@@ -10,28 +10,37 @@ class AppResponsive {
   static const double baseScreenWidth = 390.0;
   static const double baseScreenHeight = 844.0;
 
+  /// Breakpoint and scaling constants
+  static const double tabletBreakpoint = 600.0;
+  static const double smallMobileBreakpoint = 360.0;
+  static const double shortScreenBreakpoint = 680.0;
+  static const double tabletScaleFactor = 1.0;
+  static const double minScaleFactor = 0.88;
+  static const double maxScaleFactor = 1.12;
+  static const double minTextScale = 0.9;
+  static const double maxTextScale = 1.2;
+  static const double compressedSpacingFactor = 0.7;
+
   /// Current screen width
   static double width(BuildContext context) => MediaQuery.sizeOf(context).width;
 
   /// Current screen height
   static double height(BuildContext context) => MediaQuery.sizeOf(context).height;
 
-  /// Returns true if device is tablet/desktop (width >= 600px)
-  static bool isTablet(BuildContext context) => width(context) >= 600;
+  /// Returns true if device is tablet/desktop (width >= tabletBreakpoint)
+  static bool isTablet(BuildContext context) => width(context) >= tabletBreakpoint;
 
-  /// Returns true if device has a compact screen (width < 360px)
-  static bool isSmallMobile(BuildContext context) => width(context) < 360;
+  /// Returns true if device has a compact screen (width < smallMobileBreakpoint)
+  static bool isSmallMobile(BuildContext context) => width(context) < smallMobileBreakpoint;
 
   /// Dynamic scale factor clamped to prevent undersized or oversized elements
   static double scaleFactor(BuildContext context) {
     final w = width(context);
-    if (w >= 600) {
-      // Tablets/desktops shouldn't blow up button heights 2.5x; cap scale at 1.05
-      return 1.0;
+    if (w >= tabletBreakpoint) {
+      return tabletScaleFactor;
     }
     final factor = w / baseScreenWidth;
-    // Clamped strictly between 0.88 (compact phones) and 1.12 (large phones)
-    return factor.clamp(0.88, 1.12);
+    return factor.clamp(minScaleFactor, maxScaleFactor);
   }
 
   /// Dynamically scale any dimension (paddings, margins, icon sizes, heights)
@@ -43,17 +52,15 @@ class AppResponsive {
   static double fontSize(BuildContext context, double baseFontSize) {
     final factor = scaleFactor(context);
     final textScale = MediaQuery.textScalerOf(context).scale(baseFontSize) / baseFontSize;
-    // Prevent accessibility scaling from blowing past safe readable UI boundaries
-    final combined = baseFontSize * factor * textScale.clamp(0.9, 1.2);
+    final combined = baseFontSize * factor * textScale.clamp(minTextScale, maxTextScale);
     return combined.roundToDouble();
   }
 
   /// Dynamic vertical spacing between UI sections
   static double verticalSpacing(BuildContext context, double baseSpacing) {
     final h = height(context);
-    if (h < 680) {
-      // Shorter screens / keyboards open: compress spacing slightly
-      return (baseSpacing * 0.7).roundToDouble();
+    if (h < shortScreenBreakpoint) {
+      return (baseSpacing * compressedSpacingFactor).roundToDouble();
     }
     return scale(context, baseSpacing);
   }

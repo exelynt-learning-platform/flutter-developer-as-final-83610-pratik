@@ -146,7 +146,10 @@ void main() {
       ),
       expect: () => [
         const AuthLoadingState('Signing in...'),
-        const AuthFailureState('Incorrect email or password.'),
+        const AuthFailureState(
+          'Incorrect email or password.',
+          failure: AuthFailure(message: 'Incorrect email or password.'),
+        ),
       ],
     );
 

@@ -1,0 +1,12 @@
+# Declare binary files so code scanners and Git treat them as non-text binaries
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.otf binary
+*.ttf binary
+*.webp binary
+*.jar binary
+*.keystore binary
+*.so binary

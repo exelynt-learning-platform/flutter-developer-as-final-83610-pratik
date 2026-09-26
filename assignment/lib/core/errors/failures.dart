@@ -48,3 +48,17 @@ class AuthFailure extends Failure {
   @override
   int get hashCode => super.hashCode ^ code.hashCode;
 }
+
+class InvalidCredentialsFailure extends AuthFailure {
+  const InvalidCredentialsFailure({
+    super.message = 'Incorrect password',
+    super.code = 'wrong-password',
+  });
+}
+
+class UserNotFoundFailure extends AuthFailure {
+  const UserNotFoundFailure({
+    super.message = 'Email not registered',
+    super.code = 'user-not-found',
+  });
+}

@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../../../core/errors/failures.dart';
 import '../../domain/entities/user_entity.dart';
 
 abstract class AuthState extends Equatable {
@@ -35,11 +36,12 @@ class UnauthenticatedState extends AuthState {
 
 class AuthFailureState extends AuthState {
   final String errorMessage;
+  final Failure? failure;
 
-  const AuthFailureState(this.errorMessage);
+  const AuthFailureState(this.errorMessage, {this.failure});
 
   @override
-  List<Object?> get props => [errorMessage];
+  List<Object?> get props => [errorMessage, failure];
 }
 
 class PasswordResetSentState extends AuthState {

@@ -22,12 +22,22 @@ class AuthRepositoryImpl implements AuthRepository {
       );
       return Success(user);
     } on AuthException catch (e) {
-      return Error(AuthFailure(message: e.message, code: e.code));
+      return Error(_mapAuthException(e));
     } on NetworkException catch (e) {
       return Error(NetworkFailure(message: e.message));
     } catch (e) {
       return Error(AuthFailure(message: e.toString()));
     }
+  }
+
+  AuthFailure _mapAuthException(AuthException e) {
+    if (e.code == 'wrong-password' || e.message.toLowerCase().contains('incorrect password')) {
+      return InvalidCredentialsFailure(message: e.message, code: e.code);
+    }
+    if (e.code == 'user-not-found' || e.message.toLowerCase().contains('not registered')) {
+      return UserNotFoundFailure(message: e.message, code: e.code);
+    }
+    return AuthFailure(message: e.message, code: e.code);
   }
 
   @override
