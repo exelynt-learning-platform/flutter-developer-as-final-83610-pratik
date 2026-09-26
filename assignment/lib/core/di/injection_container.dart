@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../firebase_options.dart';
 import '../network/dio_client.dart';
 import '../../features/auth/data/datasources/auth_remote_data_source.dart';
 import '../../features/auth/data/datasources/local_demo_auth_remote_data_source.dart';
@@ -9,6 +10,8 @@ import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
 import '../../features/auth/domain/usecases/auth_usecases.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../theme/theme_cubit.dart';
+import '../../features/employee/data/datasources/employee_local_data_source.dart';
 import '../../features/employee/data/datasources/employee_remote_data_source.dart';
 import '../../features/employee/data/repositories/employee_repository_impl.dart';
 import '../../features/employee/domain/repositories/employee_repository.dart';
@@ -29,11 +32,13 @@ Future<void> initDependencies() async {
   bool isFirebaseReady = false;
   try {
     if (Firebase.apps.isEmpty) {
-      await Firebase.initializeApp();
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
     }
     isFirebaseReady = Firebase.apps.isNotEmpty;
   } catch (_) {
-    // google-services.json not attached or Firebase unconfigured
+    // Falls back to demo auth when Firebase options are unconfigured or unsupported platform
     isFirebaseReady = false;
   }
 
@@ -89,6 +94,16 @@ Future<void> initDependencies() async {
     ),
   );
 
+  // Theme Cubit
+  sl.registerLazySingleton<ThemeCubit>(
+    () => ThemeCubit(sl<SharedPreferences>()),
+  );
+
+  // Employee - Local Data Source
+  sl.registerLazySingleton<EmployeeLocalDataSource>(
+    () => EmployeeLocalDataSourceImpl(sharedPreferences: sl<SharedPreferences>()),
+  );
+
   // Employee - Remote Data Source
   sl.registerLazySingleton<EmployeeRemoteDataSource>(
     () => EmployeeRemoteDataSourceImpl(dio: sl<Dio>()),
@@ -98,6 +113,7 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton<EmployeeRepository>(
     () => EmployeeRepositoryImpl(
       remoteDataSource: sl<EmployeeRemoteDataSource>(),
+      localDataSource: sl<EmployeeLocalDataSource>(),
     ),
   );
 
@@ -123,6 +139,11 @@ Future<void> initDependencies() async {
 
   // Employee - BLoC
   sl.registerFactory<EmployeeBloc>(
-    () => EmployeeBloc(getEmployeesUseCase: sl<GetEmployeesUseCase>()),
+    () => EmployeeBloc(
+      getEmployeesUseCase: sl<GetEmployeesUseCase>(),
+      createEmployeeUseCase: sl<CreateEmployeeUseCase>(),
+      updateEmployeeUseCase: sl<UpdateEmployeeUseCase>(),
+      deleteEmployeeUseCase: sl<DeleteEmployeeUseCase>(),
+    ),
   );
 }

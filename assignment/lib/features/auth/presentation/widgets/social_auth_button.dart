@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/utils/app_responsive.dart';
@@ -77,69 +76,17 @@ class _GoogleLogoIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    return Image.asset(
+      'assets/icons/google_logo.png',
       width: size,
       height: size,
-      child: CustomPaint(
-        painter: _GoogleGPainter(),
+      fit: BoxFit.contain,
+      errorBuilder: (context, error, stackTrace) => Icon(
+        Icons.g_mobiledata,
+        size: size,
+        color: AppColors.primary,
       ),
     );
   }
 }
 
-class _GoogleGPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final double w = size.width;
-    final double h = size.height;
-    final double stroke = w * 0.22;
-    final Rect rect = Rect.fromLTWH(stroke / 2, stroke / 2, w - stroke, h - stroke);
-
-    final Paint bluePaint = Paint()
-      ..color = const Color(0xFF4285F4)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke
-      ..strokeCap = StrokeCap.butt;
-
-    final Paint greenPaint = Paint()
-      ..color = const Color(0xFF34A853)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke
-      ..strokeCap = StrokeCap.butt;
-
-    final Paint yellowPaint = Paint()
-      ..color = const Color(0xFFFBBC05)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke
-      ..strokeCap = StrokeCap.butt;
-
-    final Paint redPaint = Paint()
-      ..color = const Color(0xFFEA4335)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke
-      ..strokeCap = StrokeCap.butt;
-
-    // Red arc: top right through top left
-    canvas.drawArc(rect, -math.pi / 4, -math.pi / 2, false, redPaint);
-
-    // Yellow arc: left through bottom left
-    canvas.drawArc(rect, -3 * math.pi / 4, -math.pi / 2, false, yellowPaint);
-
-    // Green arc: bottom through bottom right
-    canvas.drawArc(rect, math.pi / 4, math.pi / 2, false, greenPaint);
-
-    // Blue arc & crossbar: right center
-    canvas.drawArc(rect, 0, -math.pi / 4, false, bluePaint);
-    final Paint blueFill = Paint()
-      ..color = const Color(0xFF4285F4)
-      ..style = PaintingStyle.fill;
-
-    canvas.drawRect(
-      Rect.fromLTWH(w / 2 - stroke * 0.2, h / 2 - stroke / 2, w / 2, stroke),
-      blueFill,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../../core/errors/exceptions.dart';
 import '../models/user_model.dart';
 import 'auth_remote_data_source.dart';
 
@@ -45,22 +46,61 @@ class LocalDemoAuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     return _loadUserFromPrefs();
   }
 
+  static const String _registeredUsersKey = 'local_demo_registered_users';
+
+  Map<String, Map<String, dynamic>> _getRegisteredUsers() {
+    final data = _prefs.getString(_registeredUsersKey);
+    if (data != null) {
+      try {
+        final decoded = jsonDecode(data) as Map<String, dynamic>;
+        return decoded.map((k, v) => MapEntry(k.toLowerCase(), Map<String, dynamic>.from(v as Map)));
+      } catch (_) {
+        return _seedDefaultUsers();
+      }
+    }
+    return _seedDefaultUsers();
+  }
+
+  Map<String, Map<String, dynamic>> _seedDefaultUsers() {
+    final initial = {
+      'alex.turner@company.com': {
+        'id': 'demo-user-alex',
+        'displayName': 'Alex Turner',
+        'password': 'Password123!',
+      },
+    };
+    _prefs.setString(_registeredUsersKey, jsonEncode(initial));
+    return initial;
+  }
+
   @override
   Future<UserModel> loginWithEmailAndPassword({
     required String email,
     required String password,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    final trimmedEmail = email.trim();
-    final name = trimmedEmail.split('@').first;
-    final formattedName = name.isEmpty
-        ? 'Employee User'
-        : '${name[0].toUpperCase()}${name.substring(1)}';
+    await Future.delayed(const Duration(milliseconds: 400));
+    final trimmedEmail = email.trim().toLowerCase();
+    final registeredUsers = _getRegisteredUsers();
+
+    if (!registeredUsers.containsKey(trimmedEmail)) {
+      throw const AuthException(
+        message: 'Email not registered',
+        code: 'user-not-found',
+      );
+    }
+
+    final userData = registeredUsers[trimmedEmail]!;
+    if (userData['password'] != password) {
+      throw const AuthException(
+        message: 'Incorrect password',
+        code: 'wrong-password',
+      );
+    }
 
     final user = UserModel(
-      id: 'demo-user-${trimmedEmail.hashCode.abs()}',
-      email: trimmedEmail,
-      displayName: formattedName,
+      id: userData['id'] as String? ?? 'demo-user-${trimmedEmail.hashCode.abs()}',
+      email: email.trim(),
+      displayName: userData['displayName'] as String? ?? 'Employee User',
     );
 
     await _prefs.setString(_sessionUserKey, jsonEncode(user.toJson()));
@@ -74,16 +114,27 @@ class LocalDemoAuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String password,
     String? displayName,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    final trimmedEmail = email.trim();
+    await Future.delayed(const Duration(milliseconds: 400));
+    final trimmedEmail = email.trim().toLowerCase();
+    final registeredUsers = _getRegisteredUsers();
+
+    final formattedName = (displayName != null && displayName.trim().isNotEmpty)
+        ? displayName.trim()
+        : email.trim().split('@').first;
+
     final user = UserModel(
       id: 'demo-user-${DateTime.now().millisecondsSinceEpoch}',
-      email: trimmedEmail,
-      displayName: (displayName != null && displayName.trim().isNotEmpty)
-          ? displayName.trim()
-          : trimmedEmail.split('@').first,
+      email: email.trim(),
+      displayName: formattedName,
     );
 
+    registeredUsers[trimmedEmail] = {
+      'id': user.id,
+      'displayName': user.displayName,
+      'password': password,
+    };
+
+    await _prefs.setString(_registeredUsersKey, jsonEncode(registeredUsers));
     await _prefs.setString(_sessionUserKey, jsonEncode(user.toJson()));
     _controller.add(user);
     return user;

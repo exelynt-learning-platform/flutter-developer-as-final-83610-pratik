@@ -23,6 +23,7 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  String? _passwordErrorText;
 
   @override
   void dispose() {
@@ -32,6 +33,9 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _onLoginPressed() {
+    if (_passwordErrorText != null) {
+      setState(() => _passwordErrorText = null);
+    }
     if (_formKey.currentState?.validate() ?? false) {
       context.read<AuthBloc>().add(
         LoginRequestedEvent(
@@ -43,6 +47,9 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _onGoogleSignInPressed() {
+    if (_passwordErrorText != null) {
+      setState(() => _passwordErrorText = null);
+    }
     context.read<AuthBloc>().add(const GoogleSignInRequestedEvent());
   }
 
@@ -54,17 +61,84 @@ class _LoginPageState extends State<LoginPage> {
       backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
-          if (state is AuthFailureState) {
+          if (state is AuthenticatedState) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.errorMessage),
-                backgroundColor: AppColors.error,
+                content: Row(
+                  children: [
+                    const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Signed in successfully as ${state.user.displayName ?? state.user.email}',
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor: const Color(0xFF10B981),
                 behavior: SnackBarBehavior.floating,
+                duration: const Duration(seconds: 3),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
             );
+          } else if (state is AuthFailureState) {
+            final error = state.errorMessage.trim();
+            final lower = error.toLowerCase();
+
+            if (lower.contains('incorrect password') ||
+                lower.contains('wrong password') ||
+                lower == 'wrong-password') {
+              // Password is wrong: show error text near the textfield only
+              setState(() {
+                _passwordErrorText = 'Incorrect password';
+              });
+            } else if (lower.contains('email not registered') ||
+                lower.contains('not registered') ||
+                lower.contains('not found') ||
+                lower.contains('no account')) {
+              // Not registered: show SnackBar "Email not registered"
+              setState(() {
+                _passwordErrorText = null;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Row(
+                    children: [
+                      Icon(Icons.info_outline_rounded, color: Colors.white, size: 20),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Email not registered',
+                          style: TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    ],
+                  ),
+                  backgroundColor: AppColors.error,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              );
+            } else {
+              setState(() {
+                _passwordErrorText = null;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.errorMessage),
+                  backgroundColor: AppColors.error,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              );
+            }
           }
         },
         builder: (context, state) {
@@ -99,6 +173,11 @@ class _LoginPageState extends State<LoginPage> {
                           keyboardType: TextInputType.emailAddress,
                           validator: InputValidators.validateEmail,
                           enabled: !isLoading,
+                          onChanged: (_) {
+                            if (_passwordErrorText != null) {
+                              setState(() => _passwordErrorText = null);
+                            }
+                          },
                         ),
                         SizedBox(height: AppResponsive.scale(context, 16.0)),
 
@@ -109,10 +188,16 @@ class _LoginPageState extends State<LoginPage> {
                           hint: '••••••••••••',
                           prefixIcon: Icons.lock_outline_rounded,
                           isPassword: true,
+                          errorText: _passwordErrorText,
                           textInputAction: TextInputAction.done,
                           validator: InputValidators.validatePassword,
                           onFieldSubmitted: (_) => _onLoginPressed(),
                           enabled: !isLoading,
+                          onChanged: (_) {
+                            if (_passwordErrorText != null) {
+                              setState(() => _passwordErrorText = null);
+                            }
+                          },
                         ),
                         SizedBox(height: AppResponsive.scale(context, 8.0)),
 

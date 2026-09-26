@@ -24,6 +24,7 @@ class AppTextField extends StatefulWidget {
   final bool enabled;
   final bool autofocus;
   final Key? fieldKey;
+  final String? errorText;
 
   const AppTextField({
     super.key,
@@ -43,6 +44,7 @@ class AppTextField extends StatefulWidget {
     this.enabled = true,
     this.autofocus = false,
     this.fieldKey,
+    this.errorText,
   });
 
   @override
@@ -100,6 +102,7 @@ class _AppTextFieldState extends State<AppTextField> {
           decoration: InputDecoration(
             isDense: true,
             hintText: widget.hint,
+            errorText: widget.errorText,
             hintStyle: TextStyle(
               fontSize: dynamicFontSize,
               color: const Color(0xFF94A3B8),

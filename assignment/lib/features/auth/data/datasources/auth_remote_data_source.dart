@@ -173,10 +173,11 @@ class FirebaseAuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   String _mapFirebaseError(fb.FirebaseAuthException e) {
     switch (e.code) {
       case 'user-not-found':
-        return 'No account exists for this email address.';
+        return 'Email not registered';
       case 'wrong-password':
+        return 'Incorrect password';
       case 'invalid-credential':
-        return 'Incorrect email or password. Please try again.';
+        return 'Email not registered';
       case 'email-already-in-use':
         return 'An account already exists for this email.';
       case 'invalid-email':

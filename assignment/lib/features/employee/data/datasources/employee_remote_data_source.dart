@@ -15,31 +15,41 @@ abstract class EmployeeRemoteDataSource {
   Future<List<CountryModel>> getCountries();
 }
 
-/// Implementation using Dio client connecting to mockapi.io.
+/// Remote Data Source implementation communicating directly with MockAPI endpoints:
+/// GET /country
+/// GET /employee
+/// GET /employee/:id
+/// POST /employee
+/// PUT /employee/:id
+/// DELETE /employee/:id
 class EmployeeRemoteDataSourceImpl implements EmployeeRemoteDataSource {
   final Dio dio;
 
-  EmployeeRemoteDataSourceImpl({required this.dio});
+  EmployeeRemoteDataSourceImpl({Dio? dio}) : dio = dio ?? DioClient().dio;
 
   @override
   Future<List<EmployeeModel>> getEmployees() async {
     try {
       final response = await dio.get(ApiConstants.employeeEndpoint);
-      if (response.statusCode == 200 && response.data is List) {
-        final list = response.data as List<dynamic>;
-        return list
-            .map((item) => EmployeeModel.fromJson(item as Map<String, dynamic>))
-            .toList();
+      if (response.statusCode == 200) {
+        if (response.data is List) {
+          return (response.data as List)
+              .map((json) => EmployeeModel.fromJson(json as Map<String, dynamic>))
+              .toList();
+        }
+        throw const ServerException(message: 'Invalid response format from server');
       }
       throw ServerException(
-        message: 'Invalid response format from employee API',
+        message: 'Failed to fetch employees',
         statusCode: response.statusCode,
       );
     } on DioException catch (e) {
-      throw _handleDioException(e);
-    } catch (e) {
-      if (e is ServerException || e is NetworkException) rethrow;
-      throw ServerException(message: 'Failed to fetch employees: ${e.toString()}');
+      if (e.error is ServerException) throw e.error as ServerException;
+      if (e.error is NetworkException) throw e.error as NetworkException;
+      throw ServerException(
+        message: e.message ?? 'Failed to fetch employees',
+        statusCode: e.response?.statusCode,
+      );
     }
   }
 
@@ -51,26 +61,31 @@ class EmployeeRemoteDataSourceImpl implements EmployeeRemoteDataSource {
         return EmployeeModel.fromJson(response.data as Map<String, dynamic>);
       }
       throw ServerException(
-        message: 'Employee with ID $id not found',
-        statusCode: response.statusCode,
+        message: 'Employee with ID #$id not found',
+        statusCode: response.statusCode ?? 404,
       );
     } on DioException catch (e) {
-      throw _handleDioException(e);
-    } catch (e) {
-      if (e is ServerException || e is NetworkException) rethrow;
-      throw ServerException(message: 'Failed to fetch employee: ${e.toString()}');
+      if (e.error is ServerException) throw e.error as ServerException;
+      if (e.error is NetworkException) throw e.error as NetworkException;
+      throw ServerException(
+        message: e.message ?? 'Employee with ID #$id not found',
+        statusCode: e.response?.statusCode ?? 404,
+      );
     }
   }
 
   @override
   Future<EmployeeModel> createEmployee(EmployeeModel employee) async {
     try {
+      final payload = employee.toJson();
+      if (payload['id'] == '0' || payload['id'] == '' || payload['id'] == null) {
+        payload.remove('id');
+      }
       final response = await dio.post(
         ApiConstants.employeeEndpoint,
-        data: employee.toJson(),
+        data: payload,
       );
-      if ((response.statusCode == 200 || response.statusCode == 201) &&
-          response.data is Map<String, dynamic>) {
+      if (response.statusCode == 201 || response.statusCode == 200) {
         return EmployeeModel.fromJson(response.data as Map<String, dynamic>);
       }
       throw ServerException(
@@ -78,10 +93,12 @@ class EmployeeRemoteDataSourceImpl implements EmployeeRemoteDataSource {
         statusCode: response.statusCode,
       );
     } on DioException catch (e) {
-      throw _handleDioException(e);
-    } catch (e) {
-      if (e is ServerException || e is NetworkException) rethrow;
-      throw ServerException(message: 'Failed to create employee: ${e.toString()}');
+      if (e.error is ServerException) throw e.error as ServerException;
+      if (e.error is NetworkException) throw e.error as NetworkException;
+      throw ServerException(
+        message: e.message ?? 'Failed to create employee',
+        statusCode: e.response?.statusCode,
+      );
     }
   }
 
@@ -92,18 +109,20 @@ class EmployeeRemoteDataSourceImpl implements EmployeeRemoteDataSource {
         ApiConstants.employeeByIdEndpoint(id),
         data: employee.toJson(),
       );
-      if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
+      if (response.statusCode == 200) {
         return EmployeeModel.fromJson(response.data as Map<String, dynamic>);
       }
       throw ServerException(
-        message: 'Failed to update employee $id',
+        message: 'Failed to update employee',
         statusCode: response.statusCode,
       );
     } on DioException catch (e) {
-      throw _handleDioException(e);
-    } catch (e) {
-      if (e is ServerException || e is NetworkException) rethrow;
-      throw ServerException(message: 'Failed to update employee: ${e.toString()}');
+      if (e.error is ServerException) throw e.error as ServerException;
+      if (e.error is NetworkException) throw e.error as NetworkException;
+      throw ServerException(
+        message: e.message ?? 'Failed to update employee',
+        statusCode: e.response?.statusCode,
+      );
     }
   }
 
@@ -115,14 +134,16 @@ class EmployeeRemoteDataSourceImpl implements EmployeeRemoteDataSource {
         return;
       }
       throw ServerException(
-        message: 'Failed to delete employee $id',
+        message: 'Failed to delete employee',
         statusCode: response.statusCode,
       );
     } on DioException catch (e) {
-      throw _handleDioException(e);
-    } catch (e) {
-      if (e is ServerException || e is NetworkException) rethrow;
-      throw ServerException(message: 'Failed to delete employee: ${e.toString()}');
+      if (e.error is ServerException) throw e.error as ServerException;
+      if (e.error is NetworkException) throw e.error as NetworkException;
+      throw ServerException(
+        message: e.message ?? 'Failed to delete employee',
+        statusCode: e.response?.statusCode,
+      );
     }
   }
 
@@ -131,26 +152,13 @@ class EmployeeRemoteDataSourceImpl implements EmployeeRemoteDataSource {
     try {
       final response = await dio.get(ApiConstants.countryEndpoint);
       if (response.statusCode == 200 && response.data is List) {
-        final list = response.data as List<dynamic>;
-        return list
-            .map((item) => CountryModel.fromJson(item as Map<String, dynamic>))
+        return (response.data as List)
+            .map((json) => CountryModel.fromJson(json as Map<String, dynamic>))
             .toList();
       }
-      throw ServerException(
-        message: 'Invalid response format from country API',
-        statusCode: response.statusCode,
-      );
-    } on DioException catch (e) {
-      throw _handleDioException(e);
-    } catch (e) {
-      if (e is ServerException || e is NetworkException) rethrow;
-      throw ServerException(message: 'Failed to fetch countries: ${e.toString()}');
+      return const [];
+    } catch (_) {
+      return const [];
     }
-  }
-
-  Exception _handleDioException(DioException e) {
-    if (e.error is ServerException) return e.error as ServerException;
-    if (e.error is NetworkException) return e.error as NetworkException;
-    return DioClient.mapDioException(e);
   }
 }

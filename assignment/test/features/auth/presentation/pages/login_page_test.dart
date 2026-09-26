@@ -61,5 +61,41 @@ void main() {
       expect(find.text('Email is required'), findsOneWidget);
       expect(find.text('Password is required'), findsOneWidget);
     });
+
+    testWidgets('shows Email not registered SnackBar on AuthFailureState with unregistered email', (
+      tester,
+    ) async {
+      whenListen(
+        mockAuthBloc,
+        Stream.fromIterable([
+          const AuthFailureState('Email not registered'),
+        ]),
+        initialState: const UnauthenticatedState(),
+      );
+
+      await tester.pumpWidget(createWidgetUnderTest());
+      await tester.pump();
+
+      expect(find.text('Email not registered'), findsOneWidget);
+      expect(find.byType(SnackBar), findsOneWidget);
+    });
+
+    testWidgets('shows inline error when AuthFailureState is Incorrect password', (
+      tester,
+    ) async {
+      whenListen(
+        mockAuthBloc,
+        Stream.fromIterable([
+          const AuthFailureState('Incorrect password'),
+        ]),
+        initialState: const UnauthenticatedState(),
+      );
+
+      await tester.pumpWidget(createWidgetUnderTest());
+      await tester.pump();
+
+      expect(find.text('Incorrect password'), findsOneWidget);
+      expect(find.byType(SnackBar), findsNothing);
+    });
   });
 }

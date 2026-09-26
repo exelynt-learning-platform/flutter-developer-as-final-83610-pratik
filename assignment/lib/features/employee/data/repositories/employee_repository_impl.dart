@@ -4,25 +4,49 @@ import '../../../../core/utils/result.dart';
 import '../../domain/entities/country_entity.dart';
 import '../../domain/entities/employee_entity.dart';
 import '../../domain/repositories/employee_repository.dart';
+import '../datasources/employee_local_data_source.dart';
 import '../datasources/employee_remote_data_source.dart';
 import '../models/employee_model.dart';
 
-/// Concrete implementation of EmployeeRepository interacting with remote data source.
+/// Concrete implementation of EmployeeRepository interacting with remote and local data sources.
 class EmployeeRepositoryImpl implements EmployeeRepository {
   final EmployeeRemoteDataSource remoteDataSource;
+  final EmployeeLocalDataSource? localDataSource;
 
-  EmployeeRepositoryImpl({required this.remoteDataSource});
+  EmployeeRepositoryImpl({
+    required this.remoteDataSource,
+    this.localDataSource,
+  });
 
   @override
   Future<Result<List<EmployeeEntity>>> getEmployees() async {
     try {
       final models = await remoteDataSource.getEmployees();
+      if (localDataSource != null) {
+        await localDataSource!.cacheEmployees(models);
+      }
       return Result.success(models.map((m) => m.toEntity()).toList());
     } on ServerException catch (e) {
+      if (localDataSource != null) {
+        try {
+          final cached = await localDataSource!.getLastEmployees();
+          if (cached.isNotEmpty) {
+            return Result.success(cached.map((m) => m.toEntity()).toList());
+          }
+        } catch (_) {}
+      }
       return Result.error(
         ServerFailure(message: e.message, statusCode: e.statusCode),
       );
     } on NetworkException catch (e) {
+      if (localDataSource != null) {
+        try {
+          final cached = await localDataSource!.getLastEmployees();
+          if (cached.isNotEmpty) {
+            return Result.success(cached.map((m) => m.toEntity()).toList());
+          }
+        } catch (_) {}
+      }
       return Result.error(NetworkFailure(message: e.message));
     } catch (e) {
       return Result.error(

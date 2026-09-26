@@ -5,10 +5,6 @@ class InputValidators {
     r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
   );
 
-  static final RegExp _phoneRegExp = RegExp(
-    r'^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]{7,15}$',
-  );
-
   static String? validateEmail(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'Email is required';
@@ -49,12 +45,15 @@ class InputValidators {
     return null;
   }
 
+  static final RegExp _mobile10DigitsRegExp = RegExp(r'^[0-9]{10}$');
+
   static String? validatePhone(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'Mobile number is required';
     }
-    if (!_phoneRegExp.hasMatch(value.trim())) {
-      return 'Please enter a valid phone number';
+    final cleaned = value.trim().replaceAll(RegExp(r'[\s-]'), '');
+    if (!_mobile10DigitsRegExp.hasMatch(cleaned)) {
+      return 'Mobile number must be exactly 10 digits';
     }
     return null;
   }
